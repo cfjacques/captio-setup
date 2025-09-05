@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CAPTIO Setup bootstrap (rebrand + targeted patches + banner) – v0.4
+# CAPTIO Setup bootstrap (rebrand + banner + patches) – v0.5
 # Requisitos: root (sudo -i) em Ubuntu/Debian
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -17,60 +17,70 @@ WORKDIR="/opt/captio"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
-# Menu base (temporário: baixa do repo original e aplica rebrand/patches)
+# ─────────────────────────────────────────────────────────────
+# Banner CAPTIO (garantido aparecer antes de tudo)
+# ─────────────────────────────────────────────────────────────
+cat <<'BANNER'
+   _____      _   _   _   ____  _             ____           _   _ _             
+  / ____|    | | | | | | / __ \| |           / __ \         | | (_) |            
+ | |     __ _| |_| |_| || |  | | |_ _ __ ___| |  | |_ __ ___| |_ _| |_ ___  _ __ 
+ | |    / _` | __| __| || |  | | __| '__/ _ \ |  | | '__/ __| __| | __/ _ \| '__|
+ | |___| (_| | |_| |_| || |__| | |_| | |  __/ |__| | |  \__ \ |_| | || (_) | |   
+  \_____\__,_|\__|\__|_| \____/ \__|_|  \___|\____/|_|  |___/\__|_|\__\___/|_|   
+
+                              SETUP CAPTIO  1.0
+---------------------------------------------------------------------------------
+BANNER
+
 SRC_URL="https://raw.githubusercontent.com/oriondesign2015/SetupOrion/main/SetupOrion"
 DST_FILE="SetupCaptio"
+rm -f "$DST_FILE"
 
 echo "↓ Baixando menu base..."
 curl -fsSL "$SRC_URL" -o "$DST_FILE"
 
-# ------------------------------------------------------------------
-# REBRAND CAPTIO + versão + BANNER ASCII
-# ------------------------------------------------------------------
-
-# Branding / textos gerais
+# ─────────────────────────────────────────────────────────────
+# Rebrand agressivo (nome, domínio, ocorrências isoladas)
+# ─────────────────────────────────────────────────────────────
+# nomes “óbvios”
 sed -i 's/ORION DESIGN/CAPTIO AI/g' "$DST_FILE"
 sed -i 's/SetupOrion/SetupCaptio/g' "$DST_FILE"
 sed -i 's/oriondesign\.art\.br/captioai.com/g' "$DST_FILE"
 sed -i 's/OrionDesign/CAPTIOAI/g' "$DST_FILE"
 
-# Ajusta a linha de versão textual no cabeçalho (se existir)
+# qualquer “SETUP ORION” → “SETUP CAPTIO” (mesmo sem o “SETUP ” junto)
+sed -i -E 's/\bSETUP[[:space:]]*ORION\b/SETUP CAPTIO/g' "$DST_FILE"
+sed -i -E 's/\bORION\b/CAPTIO/g' "$DST_FILE"
+
+# trocar versão no banner “- X.Y.Z -” por “- 1.0 -” (mesmo com espaçamentos)
+sed -i -E 's/-[[:space:]]*[0-9]+(\.[0-9]+){1,2}[[:space:]]*-/ - 1.0 -/g' "$DST_FILE"
+
+# se existir linha “Versão do Setup...” troca pra nossa
+sed -i 's/Versão do SetupOrion:/Versão do SetupCaptio:/g' "$DST_FILE"
 sed -i 's/Versão do SetupCaptio: \\e\[32mv\.[^\\]*\\e\[0m/Versão do SetupCaptio: \\e[32mv. 1.0\\e[0m/g' "$DST_FILE" || true
-sed -i 's/Versão do SetupOrion: \\e\[32mv\.[^\\]*\\e\[0m/Versão do SetupCaptio: \\e[32mv. 1.0\\e[0m/g' "$DST_FILE" || true
 
-# 🔥 BANNER ASCII gigante
-# Troca “SETUP ORION” -> “SETUP CAPTIO” no bloco ASCII
-sed -i 's/SETUP ORION/SETUP CAPTIO/g' "$DST_FILE"
-# Troca o sufixo de versão no banner “- X.Y.Z -” para “- 1.0 -”
-# (cobre padrões com 2 ou 3 números)
-sed -i -E 's/(-[[:space:]]*)([0-9]+\.[0-9]+(\.[0-9]+)?)\s*(-)/- 1.0 -/g' "$DST_FILE"
+# ─────────────────────────────────────────────────────────────
+# Evolution API – fixo v2.2.3 + phone version + client
+# ─────────────────────────────────────────────────────────────
+sed -i 's@\bimage:\s*atendai/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE" || true
+sed -i 's@\bimage:\s*evoapicloud/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE" || true
+sed -i 's@#- CONFIG_SESSION_PHONE_VERSION=.*@- CONFIG_SESSION_PHONE_VERSION=2.3000.1023015479@g' "$DST_FILE" || true
+sed -i 's@CONFIG_SESSION_PHONE_CLIENT=.*@CONFIG_SESSION_PHONE_CLIENT=CAPTIOAI@g' "$DST_FILE" || true
+sed -i 's@#- CONFIG_SESSION_PHONE_CLIENT=.*@- CONFIG_SESSION_PHONE_CLIENT=CAPTIOAI@g' "$DST_FILE" || true
 
-# ------------------------------------------------------------------
-# Evolution API – fixar versão e client/phone version
-# ------------------------------------------------------------------
-sed -i 's@\bimage:\s*atendai/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE"
-sed -i 's@\bimage:\s*evoapicloud/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE"
-# garantir variáveis necessárias
-sed -i 's@#- CONFIG_SESSION_PHONE_VERSION=.*@- CONFIG_SESSION_PHONE_VERSION=2.3000.1023015479@g' "$DST_FILE"
-sed -i 's@CONFIG_SESSION_PHONE_CLIENT=.*@CONFIG_SESSION_PHONE_CLIENT=CAPTIOAI@g' "$DST_FILE"
-sed -i 's@#- CONFIG_SESSION_PHONE_CLIENT=.*@- CONFIG_SESSION_PHONE_CLIENT=CAPTIOAI@g' "$DST_FILE"
-
-# ------------------------------------------------------------------
-# Chatwoot – perguntas IG/FB APENAS dentro do fluxo do Chatwoot
-#   1) Insere perguntas após a pergunta de porta SMTP
-#   2) Ativa as envs no YAML gerado SOMENTE se você preencher
-# ------------------------------------------------------------------
-
-# (1) Perguntas FB/IG depois do SMTP (ajusta o ponto exato do script original)
+# ─────────────────────────────────────────────────────────────
+# Chatwoot – perguntas IG/FB somente no fluxo do Chatwoot
+#   1) inserir perguntas após a porta SMTP
+#   2) ativar envs no YAML se valores existirem
+# ─────────────────────────────────────────────────────────────
 sed -i '/Digite a porta SMTP do Email (ex: 465): \\\e\[0m\" && read -r porta_smtp_chatwoot/a \
     \ \ \ \ echo \"\"\\n\
-    \ \ \ \ echo -e \"\\e[97mIntegração opcional: Instagram/Facebook (pressione ENTER para pular)\\e[0m\"\\n\
+    \ \ \ \ echo -e \"\\e[97mIntegração opcional: Instagram/Facebook (ENTER para pular)\\e[0m\"\\n\
     \ \ \ \ echo -en \"\\e[33mFB_APP_ID: \\e[0m\" \&\& read -r FB_APP_ID\\n\
     \ \ \ \ echo -en \"\\e[33mFB_APP_SECRET: \\e[0m\" \&\& read -r FB_APP_SECRET\\n\
     \ \ \ \ echo -en \"\\e[33mFB_VERIFY_TOKEN: \\e[0m\" \&\& read -r FB_VERIFY_TOKEN\\n\
     \ \ \ \ echo -en \"\\e[33mIG_VERIFY_TOKEN: \\e[0m\" \&\& read -r IG_VERIFY_TOKEN\\n' "$DST_FILE" || true
 
-# (2) Ativa envs no YAML do Chatwoot se variáveis foram informadas
 sed -i '/STACK_NAME=\"chatwoot\${1:\+_\$1}\"/i \
     \ \ \ \ # Ativa envs do Facebook/Instagram no YAML se informadas\\n\
     \ \ \ \ if [ -n \"\${FB_APP_ID:-}\" ]; then sed -i \"s/#- FB_APP_ID=.*/- FB_APP_ID=\${FB_APP_ID}/\" chatwoot\${1:+_\$1}.yaml; fi\\n\
@@ -81,5 +91,5 @@ sed -i '/STACK_NAME=\"chatwoot\${1:\+_\$1}\"/i \
 chmod +x "$DST_FILE"
 
 echo
-echo "✅ CAPTIO patches prontos. Iniciando menu..."
+echo "✅ CAPTIO patches aplicados. Iniciando menu..."
 exec ./"$DST_FILE"
