@@ -1,49 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CAPTIO Setup bootstrap (banner override + versao + patches) – v0.7
+# CAPTIO Setup bootstrap (banner do cliente + rebrand + patches) – v0.9
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "🚫 Rode como root (sudo -i)."
-  exit 1
-fi
+if [ "$(id -u)" -ne 0 ]; then echo "🚫 Rode como root (sudo -i)."; exit 1; fi
+if ! command -v curl >/dev/null 2>&1; then apt-get update -y && apt-get install -y curl ca-certificates; fi
 
-if ! command -v curl >/dev/null 2>&1; then
-  apt-get update -y && apt-get install -y curl ca-certificates
-fi
-
-WORKDIR="/opt/captio"
-mkdir -p "$WORKDIR"
-cd "$WORKDIR"
+WORKDIR="/opt/captio"; mkdir -p "$WORKDIR"; cd "$WORKDIR"
 
 SRC_URL="https://raw.githubusercontent.com/oriondesign2015/SetupOrion/main/SetupOrion"
-DST_FILE="SetupCaptio"
-TMP_OUT="$DST_FILE.tmp"
+DST_FILE="SetupCaptio"; TMP_OUT="$DST_FILE.tmp"
 
 echo "↓ Baixando menu base..."
 curl -fsSL "$SRC_URL" -o "$DST_FILE"
 
-# ─────────────────────────────────────────────────────────────
-# Rebrand textual básico (site / nome)
-# ─────────────────────────────────────────────────────────────
+# ── Rebrand textual
 sed -i 's/ORION DESIGN/CAPTIO AI/g' "$DST_FILE"
 sed -i 's/SetupOrion/SetupCaptio/g' "$DST_FILE"
+sed -i -E 's/[Oo]rion[Dd]esign/CAPTIOAI/g' "$DST_FILE"
 sed -i 's/oriondesign\.art\.br/captioai.com/g' "$DST_FILE"
 sed -i 's/Versão do SetupOrion:/Versão do SetupCaptio:/g' "$DST_FILE" || true
 
-# ─────────────────────────────────────────────────────────────
-# Evolution API – fixo v2.2.3 + phone version + client
-# ─────────────────────────────────────────────────────────────
+# ── Evolution API — fixo v2.2.3 + phone version + client
 sed -i 's@\bimage:\s*atendai/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE" || true
 sed -i 's@\bimage:\s*evoapicloud/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE" || true
 sed -i 's@#- CONFIG_SESSION_PHONE_VERSION=.*@- CONFIG_SESSION_PHONE_VERSION=2.3000.1023015479@g' "$DST_FILE" || true
 sed -i 's@CONFIG_SESSION_PHONE_CLIENT=.*@CONFIG_SESSION_PHONE_CLIENT=CAPTIOAI@g' "$DST_FILE" || true
 sed -i 's@#- CONFIG_SESSION_PHONE_CLIENT=.*@- CONFIG_SESSION_PHONE_CLIENT=CAPTIOAI@g' "$DST_FILE" || true
 
-# ─────────────────────────────────────────────────────────────
-# Chatwoot – perguntas FB/IG só no fluxo do Chatwoot
-# (após pergunta da porta SMTP) + ativação condicional no YAML
-# ─────────────────────────────────────────────────────────────
+# ── Chatwoot — perguntas FB/IG apenas no fluxo do Chatwoot + ativação condicional
 sed -i '/Digite a porta SMTP do Email (ex: 465): \\\e\[0m\" && read -r porta_smtp_chatwoot/a \
     \ \ \ \ echo \"\"\\n\
     \ \ \ \ echo -e \"\\e[97mIntegração opcional: Instagram/Facebook (ENTER para pular)\\e[0m\"\\n\
@@ -59,51 +44,44 @@ sed -i '/STACK_NAME=\"chatwoot\${1:\+_\$1}\"/i \
     \ \ \ \ if [ -n \"\${FB_VERIFY_TOKEN:-}\" ]; then sed -i \"s/#- FB_VERIFY_TOKEN=.*/- FB_VERIFY_TOKEN=\${FB_VERIFY_TOKEN}/\" chatwoot\${1:+_\$1}.yaml; fi\\n\
     \ \ \ \ if [ -n \"\${IG_VERIFY_TOKEN:-}\" ]; then sed -i \"s/#- IG_VERIFY_TOKEN=.*/- IG_VERIFY_TOKEN=\${IG_VERIFY_TOKEN}/\" chatwoot\${1:+_\$1}.yaml; fi\\n' "$DST_FILE" || true
 
-# ─────────────────────────────────────────────────────────────
-# OVERRIDE de FUNÇÕES: banner gigante e linha de versão
-#   - Substitui nome_instalador() (banner ASCII grande)
-#   - Substitui versao() (texto “Versão do Setup… v. 1.0” + link do site)
-# ─────────────────────────────────────────────────────────────
-
-# (A) nova função nome_instalador()
+# ── Override do banner: substitui a função nome_instalador() pelo SEU bloco
 cat > /opt/captio/_func_nome_instalador <<'EOF_FUNC_A'
-nome_instalador() { 
-    clear
-    echo ""
-    echo -e "$amarelo===================================================================================================\e[0m"
-    echo -e "$amarelo=                                                                                                 =\e[0m"
-    echo -e "$branco       ███████╗███████╗████████╗██╗   ██╗██████╗       ██████╗ █████╗ ██████╗ ████████╗██╗ ██████╗  \e[0m"
-    echo -e "$branco       ██╔════╝██╔════╝╚══██╔══╝██║   ██║██╔══██╗      ██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██║██╔═══██╗ \e[0m"
-    echo -e "$branco       ███████╗█████╗     ██║   ██║   ██║██████╔╝      ██████╔╝███████║██████╔╝   ██║   ██║██║   ██║ \e[0m"
-    echo -e "$branco       ╚════██║██╔══╝     ██║   ██║   ██║██╔═══╝       ██╔══██╗██╔══██║██╔══██╗   ██║   ██║██║   ██║ \e[0m"
-    echo -e "$branco       ███████║███████╗   ██║   ╚██████╔╝██║           ██║  ██║██║  ██║██║  ██║   ██║   ██║╚██████╔╝ \e[0m"
-    echo -e "$branco       ╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝           ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝  \e[0m"
-    echo -e "$amarelo=                                                                                                 =\e[0m"
-    echo -e "$amarelo=                                        SETUP CAPTIO  -  1.0                                     =\e[0m"
-    echo -e "$amarelo=                                                                                                 =\e[0m"
-    echo -e "$amarelo===================================================================================================\e[0m"
-    echo ""
+nome_instalador() {
+  clear
+  echo -e "$amarelo===================================================================================================$reset"
+  echo -e "$amarelo=$reset"
+  echo -e "$branco"
+cat <<'CAPTIO_ASCII'
+███████╗███████╗████████╗██╗   ██╗██████╗      ██████╗ █████╗ ██████╗ ████████╗██╗ ██████╗ 
+██╔════╝██╔════╝╚══██╔══╝██║   ██║██╔══██╗    ██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██║██╔═══██╗
+███████╗█████╗     ██║   ██║   ██║██████╔╝    ██║     ███████║██████╔╝   ██║   ██║██║   ██║
+╚════██║██╔══╝     ██║   ██║   ██║██╔═══╝     ██║     ██╔══██║██╔═══╝    ██║   ██║██║   ██║
+███████║███████╗   ██║   ╚██████╔╝██║         ╚██████╗██║  ██║██║        ██║   ██║╚██████╔╝
+╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝          ╚═════╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝ ╚═════╝ 
+CAPTIO_ASCII
+  echo -e "$reset"
+  echo -e "$amarelo=                                         SETUP CAPTIO  -  1.0                                  =$reset"
+  echo -e "$amarelo===================================================================================================$reset"
+  echo ""
 }
 EOF_FUNC_A
 
-# (B) nova função versao()
+# ── Override da função versao()
 cat > /opt/captio/_func_versao <<'EOF_FUNC_B'
 versao() {
-echo -e "                                   \e[97mVersão do SetupCaptio: \e[32mv. 1.0\e[0m                                  "
-echo -e "\e[32mcaptioai.com/setup\e[0m"
+  echo -e "                     \e[97mVersão do SetupCaptio: \e[32mv. 1.0\e[0m"
+  echo -e "\e[32mhttps://captioai.com/setup\e[0m"
 }
 EOF_FUNC_B
 
-# utilitário awk para substituir função por outra
+# utilitário para substituir funções no script original
 replace_func () {
-  local func="$1" srcfile="$2" newfile="$3" ; local tmp="${srcfile}.tmp.$$"
+  local func="$1" srcfile="$2" newfile="$3"; local tmp="${srcfile}.tmp.$$"
   awk -v name="$func" -v repl="$newfile" '
     BEGIN{inblock=0}
     $0 ~ "^[[:space:]]*"name"[[:space:]]*\\(\\)[[:space:]]*\\{" {
       while ((getline L < repl) > 0) print L
-      close(repl)
-      inblock=1
-      next
+      close(repl); inblock=1; next
     }
     inblock==1 && /^}/ { inblock=0; next }
     inblock==1 { next }
@@ -111,12 +89,9 @@ replace_func () {
   ' "$srcfile" > "$tmp" && mv "$tmp" "$srcfile"
 }
 
-# aplica overrides
 replace_func "nome_instalador" "$DST_FILE" "/opt/captio/_func_nome_instalador"
 replace_func "versao"          "$DST_FILE" "/opt/captio/_func_versao"
 
 chmod +x "$DST_FILE"
-
-echo
-echo "✅ CAPTIO patches aplicados (banner + versão). Iniciando menu..."
+echo; echo "✅ CAPTIO patches prontos. Iniciando menu..."
 exec ./"$DST_FILE"
