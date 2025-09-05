@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CAPTIO Setup bootstrap (banner do cliente + rebrand + patches) – v0.9
+# CAPTIO Setup bootstrap (banner + rebrand + patches) – v0.10
 
 if [ "$(id -u)" -ne 0 ]; then echo "🚫 Rode como root (sudo -i)."; exit 1; fi
 if ! command -v curl >/dev/null 2>&1; then apt-get update -y && apt-get install -y curl ca-certificates; fi
@@ -17,9 +17,12 @@ curl -fsSL "$SRC_URL" -o "$DST_FILE"
 # ── Rebrand textual
 sed -i 's/ORION DESIGN/CAPTIO AI/g' "$DST_FILE"
 sed -i 's/SetupOrion/SetupCaptio/g' "$DST_FILE"
-sed -i -E 's/[Oo]rion[Dd]esign/CAPTIOAI/g' "$DST_FILE"
-sed -i 's/oriondesign\.art\.br/captioai.com/g' "$DST_FILE"
+sed -i -E 's/[Oo]rion[Dd]esign/CaptioAI/g' "$DST_FILE"                      # nome da empresa
+sed -i 's/oriondesign\.art\.br/captioai.com/g' "$DST_FILE"                  # domínio do site
 sed -i 's/Versão do SetupOrion:/Versão do SetupCaptio:/g' "$DST_FILE" || true
+# Corrige qualquer variação de linha que cite o autor/e-mail
+sed -i -E 's/[Cc]aptio[Aa][Ii][[:space:]]*\(contato@captioai\.art\.br\)/CaptioAI (contato@captioai.com)/g' "$DST_FILE"
+sed -i -E 's/[Oo]rion[Dd]esign[[:space:]]*\(contato@[^)]*\)/CaptioAI (contato@captioai.com)/g' "$DST_FILE"
 
 # ── Evolution API — fixo v2.2.3 + phone version + client
 sed -i 's@\bimage:\s*atendai/evolution-api:[^"'"'"' ]*@image: atendai/evolution-api:v2.2.3@g' "$DST_FILE" || true
@@ -44,7 +47,7 @@ sed -i '/STACK_NAME=\"chatwoot\${1:\+_\$1}\"/i \
     \ \ \ \ if [ -n \"\${FB_VERIFY_TOKEN:-}\" ]; then sed -i \"s/#- FB_VERIFY_TOKEN=.*/- FB_VERIFY_TOKEN=\${FB_VERIFY_TOKEN}/\" chatwoot\${1:+_\$1}.yaml; fi\\n\
     \ \ \ \ if [ -n \"\${IG_VERIFY_TOKEN:-}\" ]; then sed -i \"s/#- IG_VERIFY_TOKEN=.*/- IG_VERIFY_TOKEN=\${IG_VERIFY_TOKEN}/\" chatwoot\${1:+_\$1}.yaml; fi\\n' "$DST_FILE" || true
 
-# ── Override do banner: substitui a função nome_instalador() pelo SEU bloco
+# ── Override do banner: substitui a função nome_instalador() pelo SEU ASCII + versão
 cat > /opt/captio/_func_nome_instalador <<'EOF_FUNC_A'
 nome_instalador() {
   clear
@@ -58,9 +61,15 @@ cat <<'CAPTIO_ASCII'
 ╚════██║██╔══╝     ██║   ██║   ██║██╔═══╝     ██║     ██╔══██║██╔═══╝    ██║   ██║██║   ██║
 ███████║███████╗   ██║   ╚██████╔╝██║         ╚██████╗██║  ██║██║        ██║   ██║╚██████╔╝
 ╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝          ╚═════╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚═╝ ╚═════╝ 
+                                                                                           
+                              ██╗   ██╗     ██╗    ██████╗                                 
+                              ██║   ██║    ███║   ██╔═████╗                                
+                    █████╗    ██║   ██║    ╚██║   ██║██╔██║    █████╗                      
+                    ╚════╝    ╚██╗ ██╔╝     ██║   ████╔╝██║    ╚════╝                      
+                               ╚████╔╝      ██║██╗╚██████╔╝                                
+                                ╚═══╝       ╚═╝╚═╝ ╚═════╝                                 
 CAPTIO_ASCII
   echo -e "$reset"
-  echo -e "$amarelo=                                         SETUP CAPTIO  -  1.0                                  =$reset"
   echo -e "$amarelo===================================================================================================$reset"
   echo ""
 }
